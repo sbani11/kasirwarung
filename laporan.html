@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Laporan Transaksi</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <header>
+    <h1>Laporan</h1>
+    <button onclick="window.location.href='index.html'" class="btn btn-secondary">🏠 Home</button>
+  </header>
+<body>
+    
+<body>
+  <div class="container">
+
+    <!-- Filter tanggal -->
+    <div class="filter-box">
+      <label>Dari:</label>
+      <input type="date" id="tanggalMulai">
+      <label>Sampai:</label>
+      <input type="date" id="tanggalAkhir">
+      <button class="btn btn-primary" id="btnFilter">🔍 Filter</button>
+      <button class="btn btn-success" id="btnExport">💾 Export Excel</button>
+    </div>
+
+    <!-- Tabel laporan -->
+    <table>
+      <thead>
+        <tr>
+          <th>Tanggal</th>
+          <th>Nama Barang</th>
+          <th>Qty</th>
+          <th>Harga Satuan</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody id="laporanBody">
+        <tr><td colspan="5" style="text-align:center;">Memuat data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Script -->
+  <script type="module" src="laporan.js"></script>
+  <!-- Library Export Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</body>
+</html>

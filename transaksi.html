@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Transaksi</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>💰 Transaksi</h1>
+    <button onclick="window.location.href='index.html'" class="btn btn-secondary">🏠 Home</button>
+  </header>
+
+  <main>
+    <section class="barang-list">
+      <h2>📦 Daftar Barang</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>Harga</th>
+            <th>Stok</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="barangTableBody"></tbody>
+      </table>
+    </section>
+
+    <section class="cart-section">
+      <h2>🛒 Keranjang</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>Qty</th>
+            <th>Harga</th>
+            <th>Subtotal</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="cartTableBody"></tbody>
+      </table>
+      <h3>Total: Rp <span id="totalHarga">0</span></h3>
+      <button id="saveTransactionBtn" class="btn-primary">💾 Simpan Transaksi</button>
+    </section>
+  </main>
+
+  <script type="module">
+    import { db } from './firebase-config.js';
+    import {
+      collection, getDocs, doc, updateDoc, addDoc, increment
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+    const barangTableBody = document.getElementById('barangTableBody');
+    const cartTableBody = document.getElementById('cartTableBody');
+    const totalHargaEl = document.getElementById('totalHarga');
+    const saveTransactionBtn = document.getElementById('saveTransactionBtn');
+
+    let cart = [];
+
+    // Ambil data barang dari Firestore
+    async function loadBarang() {
+      barangTableBody.innerHTML = '';
+      const querySnapshot = await getDocs(collection(db, 'barang'));
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${data.nama}</td>
+          <td>${data.harga}</td>
+          <td>${data.stok}</td>
+          <td><button class="btn-add" data-id="${docSnap.id}" data-nama="${data.nama}" data-harga="${data.harga}">Tambah</button></td>
+        `;
+        barangTableBody.appendChild(tr);
+      });
+    }
+
+    // Tambah barang ke keranjang
+    barangTableBody.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-add')) {
+        const id = e.target.dataset.id;
+        const nama = e.target.dataset.nama;
+        const harga = parseInt(e.target.dataset.harga);
+
+        const existing = cart.find(item => item.id === id);
+        if (existing) {
+          existing.qty++;
+        } else {
+          cart.push({ id, nama, harga, qty: 1 });
+        }
+        renderCart();
+      }
+    });
+
+    // Render keranjang
+    function renderCart() {
+      cartTableBody.innerHTML = '';
+      let total = 0;
+
+      cart.forEach((item, index) => {
+        const subtotal = item.qty * item.harga;
+        total += subtotal;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.nama}</td>
+          <td><input type="number" min="1" value="${item.qty}" data-index="${index}" class="qty-input"></td>
+          <td>${item.harga}</td>
+          <td>${subtotal}</td>
+          <td><button class="btn-delete" data-index="${index}">Hapus</button></td>
+        `;
+        cartTableBody.appendChild(tr);
+      });
+
+      totalHargaEl.textContent = total;
+    }
+
+    // Update qty
+    cartTableBody.addEventListener('input', (e) => {
+      if (e.target.classList.contains('qty-input')) {
+        const index = e.target.dataset.index;
+        cart[index].qty = parseInt(e.target.value);
+        renderCart();
+      }
+    });
+
+    // Hapus item dari cart
+    cartTableBody.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-delete')) {
+        const index = e.target.dataset.index;
+        cart.splice(index, 1);
+        renderCart();
+      }
+    });
+
+    // Simpan transaksi ke Firestore
+    saveTransactionBtn.addEventListener('click', async () => {
+      if (cart.length === 0) return alert('Keranjang kosong!');
+
+      const transaksiRef = collection(db, 'transaksi');
+      const totalHarga = cart.reduce((sum, item) => sum + item.qty * item.harga, 0);
+
+      await addDoc(transaksiRef, {
+        items: cart,
+        total: totalHarga,
+        tanggal: new Date()
+      });
+
+      // Kurangi stok barang di Firestore
+      for (let item of cart) {
+        const barangRef = doc(db, 'barang', item.id);
+        await updateDoc(barangRef, { stok: increment(-item.qty) });
+      }
+
+      alert('Transaksi berhasil disimpan!');
+      cart = [];
+      renderCart();
+      loadBarang();
+    });
+
+    loadBarang();
+  </script>
+</body>
+</html>

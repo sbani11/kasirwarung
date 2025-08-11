@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelola Barang</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header>
+    <h1>Kelola Barang</h1>
+    <button onclick="window.location.href='index.html'" class="btn btn-secondary">🏠 Home</button>
+  </header>
+<body>
+
+  <div class="container">
+    <h1>📦 Kelola Barang</h1>
+    <button class="btn btn-secondary" onclick="window.location.href='index.html'">🏠 Home</button>
+    <button class="btn btn-primary" onclick="window.location.href='tambah-barang.html'">➕ Tambah Barang</button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nama Barang</th>
+          <th>Harga</th>
+          <th>Stok</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="barangBody">
+        <!-- Data barang dari Firebase -->
+      </tbody>
+    </table>
+  </div>
+
+  <script type="module" src="barang.js"></script>
+</body>
+</html>

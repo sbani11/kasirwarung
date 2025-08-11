@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tambah Barang</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container-full">
+    <h1 class="page-title">➕ Tambah Barang</h1>
+    <p class="subtitle">Isi form di bawah untuk menambahkan barang baru</p>
+
+    <form id="barangForm" class="form-full">
+      <label for="idBarang">ID Barang / Kode Barcode</label>
+      <input type="text" id="idBarang" placeholder="Contoh: 8991234567890" required>
+
+      <label for="namaBarang">Nama Barang</label>
+      <input type="text" id="namaBarang" placeholder="Contoh: Minyak Goreng" required>
+
+      <label for="hargaBarang">Harga</label>
+      <input type="number" id="hargaBarang" placeholder="Contoh: 15000" required>
+
+      <label for="stokBarang">Stok</label>
+      <input type="number" id="stokBarang" placeholder="Contoh: 50" required>
+
+      <div class="form-actions-vertical">
+        <button type="submit" class="btn btn-primary btn-big">💾 Simpan</button>
+        <button type="button" class="btn btn-secondary btn-big" onclick="window.location.href='barang.html'">↩ Kembali</button>
+      </div>
+    </form>
+  </div>
+
+  <script type="module" src="tambahBarang.js"></script>
+</body>
+</html>
