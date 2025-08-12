@@ -1,164 +1,152 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Transaksi</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Transaksi Kasir</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="container">
+   
   <header>
-    <h1>💰 Transaksi</h1>
+    <h1>🛒 Transaksi</h1>
     <button onclick="window.location.href='index.html'" class="btn btn-secondary">🏠 Home</button>
   </header>
+    <body>
 
-  <main>
-    <section class="barang-list">
-      <h2>📦 Daftar Barang</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Nama</th>
-            <th>Harga</th>
-            <th>Stok</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody id="barangTableBody"></tbody>
-      </table>
-    </section>
+    <!-- Search / Scan Barcode -->
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Scan barcode / ketik ID atau Nama Barang..." autofocus>
+    </div>
 
-    <section class="cart-section">
-      <h2>🛒 Keranjang</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Nama</th>
-            <th>Qty</th>
-            <th>Harga</th>
-            <th>Subtotal</th>
-            <th>Aksi</th>
-          </tr>
-        </thead>
-        <tbody id="cartTableBody"></tbody>
-      </table>
-      <h3>Total: Rp <span id="totalHarga">0</span></h3>
-      <button id="saveTransactionBtn" class="btn-primary">💾 Simpan Transaksi</button>
-    </section>
-  </main>
+    <!-- Tabel Keranjang -->
+    <table>
+      <thead>
+        <tr>
+          <th>Nama Barang</th>
+          <th>Qty</th>
+          <th>Harga Satuan</th>
+          <th>Subtotal</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="keranjang"></tbody>
+    </table>
+
+    <!-- Total & Bayar -->
+    <div class="total-box">
+      <h3>Total: Rp <span id="totalBelanja">0</span></h3>
+      <button class="btn btn-primary" id="btnBayar">💳 Bayar</button>
+    </div>
+  </div>
 
   <script type="module">
     import { db } from './firebase-config.js';
-    import {
-      collection, getDocs, doc, updateDoc, addDoc, increment
-    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    import { collection, getDocs, addDoc, Timestamp, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-    const barangTableBody = document.getElementById('barangTableBody');
-    const cartTableBody = document.getElementById('cartTableBody');
-    const totalHargaEl = document.getElementById('totalHarga');
-    const saveTransactionBtn = document.getElementById('saveTransactionBtn');
+    let keranjang = [];
+    const keranjangEl = document.getElementById("keranjang");
+    const totalEl = document.getElementById("totalBelanja");
+    const searchInput = document.getElementById("searchInput");
 
-    let cart = [];
-
-    // Ambil data barang dari Firestore
-    async function loadBarang() {
-      barangTableBody.innerHTML = '';
+    // Cari barang by ID atau nama
+    async function cariBarang(keyword) {
       const querySnapshot = await getDocs(collection(db, 'barang'));
+      keyword = keyword.toLowerCase();
+      let found = null;
+
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${data.nama}</td>
-          <td>${data.harga}</td>
-          <td>${data.stok}</td>
-          <td><button class="btn-add" data-id="${docSnap.id}" data-nama="${data.nama}" data-harga="${data.harga}">Tambah</button></td>
-        `;
-        barangTableBody.appendChild(tr);
+        if (docSnap.id.toLowerCase() === keyword || data.nama.toLowerCase() === keyword) {
+          found = { id: docSnap.id, nama: data.nama, harga: data.harga };
+        }
       });
+
+      return found;
     }
 
-    // Tambah barang ke keranjang
-    barangTableBody.addEventListener('click', (e) => {
-      if (e.target.classList.contains('btn-add')) {
-        const id = e.target.dataset.id;
-        const nama = e.target.dataset.nama;
-        const harga = parseInt(e.target.dataset.harga);
+    // Event scan barcode / tekan enter
+    searchInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter') {
+        const keyword = searchInput.value.trim();
+        if (!keyword) return;
 
-        const existing = cart.find(item => item.id === id);
-        if (existing) {
-          existing.qty++;
+        const barang = await cariBarang(keyword);
+        if (barang) {
+          tambahKeranjang(barang);
         } else {
-          cart.push({ id, nama, harga, qty: 1 });
+          alert('Barang tidak ditemukan!');
         }
-        renderCart();
+        searchInput.value = '';
       }
     });
 
-    // Render keranjang
-    function renderCart() {
-      cartTableBody.innerHTML = '';
-      let total = 0;
+    function tambahKeranjang(barang) {
+      const index = keranjang.findIndex(item => item.id === barang.id);
+      if (index >= 0) {
+        keranjang[index].qty++;
+      } else {
+        keranjang.push({ ...barang, qty: 1 });
+      }
+      renderKeranjang();
+    }
 
-      cart.forEach((item, index) => {
+    function renderKeranjang() {
+      keranjangEl.innerHTML = "";
+      let total = 0;
+      keranjang.forEach((item, i) => {
         const subtotal = item.qty * item.harga;
         total += subtotal;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${item.nama}</td>
-          <td><input type="number" min="1" value="${item.qty}" data-index="${index}" class="qty-input"></td>
-          <td>${item.harga}</td>
-          <td>${subtotal}</td>
-          <td><button class="btn-delete" data-index="${index}">Hapus</button></td>
+        keranjangEl.innerHTML += `
+          <tr>
+            <td>${item.nama}</td>
+            <td>
+              <button onclick="ubahQty(${i}, -1)">-</button>
+              ${item.qty}
+              <button onclick="ubahQty(${i}, 1)">+</button>
+            </td>
+            <td>Rp ${item.harga.toLocaleString("id-ID")}</td>
+            <td>Rp ${subtotal.toLocaleString("id-ID")}</td>
+            <td><button onclick="hapusItem(${i})">Hapus</button></td>
+          </tr>
         `;
-        cartTableBody.appendChild(tr);
       });
-
-      totalHargaEl.textContent = total;
+      totalEl.textContent = total.toLocaleString("id-ID");
     }
 
-    // Update qty
-    cartTableBody.addEventListener('input', (e) => {
-      if (e.target.classList.contains('qty-input')) {
-        const index = e.target.dataset.index;
-        cart[index].qty = parseInt(e.target.value);
-        renderCart();
+    window.ubahQty = function(i, val) {
+      keranjang[i].qty += val;
+      if (keranjang[i].qty <= 0) keranjang.splice(i, 1);
+      renderKeranjang();
+    }
+
+    window.hapusItem = function(i) {
+      keranjang.splice(i, 1);
+      renderKeranjang();
+    }
+
+    document.getElementById("btnBayar").addEventListener("click", async () => {
+      if (keranjang.length === 0) {
+        alert("Keranjang kosong!");
+        return;
+      }
+      try {
+        await addDoc(collection(db, "transaksi"), {
+          items: keranjang,
+          total: keranjang.reduce((sum, i) => sum + i.harga * i.qty, 0),
+          waktu: Timestamp.now(),
+          tanggal: serverTimestamp()
+        });
+        alert("Transaksi berhasil!");
+        keranjang = [];
+        renderKeranjang();
+      } catch (error) {
+        console.error("Gagal menyimpan transaksi:", error);
+        alert("Terjadi kesalahan saat menyimpan transaksi.");
       }
     });
 
-    // Hapus item dari cart
-    cartTableBody.addEventListener('click', (e) => {
-      if (e.target.classList.contains('btn-delete')) {
-        const index = e.target.dataset.index;
-        cart.splice(index, 1);
-        renderCart();
-      }
-    });
-
-    // Simpan transaksi ke Firestore
-    saveTransactionBtn.addEventListener('click', async () => {
-      if (cart.length === 0) return alert('Keranjang kosong!');
-
-      const transaksiRef = collection(db, 'transaksi');
-      const totalHarga = cart.reduce((sum, item) => sum + item.qty * item.harga, 0);
-
-      await addDoc(transaksiRef, {
-        items: cart,
-        total: totalHarga,
-        tanggal: new Date()
-      });
-
-      // Kurangi stok barang di Firestore
-      for (let item of cart) {
-        const barangRef = doc(db, 'barang', item.id);
-        await updateDoc(barangRef, { stok: increment(-item.qty) });
-      }
-
-      alert('Transaksi berhasil disimpan!');
-      cart = [];
-      renderCart();
-      loadBarang();
-    });
-
-    loadBarang();
   </script>
 </body>
 </html>
