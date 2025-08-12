@@ -277,3 +277,21 @@ tr:hover {
 .filter-box input {
   padding: 5px;
 }
+
+.search-box {
+  margin: 15px 0;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 15px;
+  font-size: 18px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+}
+
+.search-box input:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0,123,255,0.5);
+}
