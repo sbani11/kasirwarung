@@ -1,17 +1,45 @@
 import { db } from "./firebase-config.js";
-import { collection, getDocs, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const barangBody = document.getElementById("barangBody");
 const searchInput = document.getElementById("searchBarang");
 
-// Pesan awal
-barangBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Ketik ID atau Nama barang untuk mencari</td></tr>`;
+let semuaBarang = []; // simpan semua data barang untuk keperluan filter
 
-// Fungsi render tabel
+// Fungsi untuk load data barang
+async function loadBarang() {
+  barangBody.innerHTML = ""; // kosongkan tabel
+
+  try {
+    const querySnapshot = await getDocs(collection(db, "barang"));
+    semuaBarang = []; // reset array
+
+    if (querySnapshot.empty) {
+      barangBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada data barang</td></tr>`;
+      return;
+    }
+
+    querySnapshot.forEach((docSnap) => {
+      semuaBarang.push({
+        id: docSnap.id,
+        ...docSnap.data()
+      });
+    });
+
+    renderTabel(semuaBarang);
+
+  } catch (error) {
+    console.error("Gagal mengambil data barang:", error);
+    barangBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error memuat data!</td></tr>`;
+  }
+}
+
+// Fungsi untuk render tabel dari array barang
 function renderTabel(dataArray) {
   barangBody.innerHTML = "";
   dataArray.forEach((data) => {
     const tr = document.createElement("tr");
+
     tr.innerHTML = `
       <td>${data.id}</td>
       <td>${data.nama}</td>
@@ -22,6 +50,7 @@ function renderTabel(dataArray) {
         <button class="btn btn-danger" onclick="hapusBarang('${data.id}')">🗑 Hapus</button>
       </td>
     `;
+
     barangBody.appendChild(tr);
   });
 
@@ -29,40 +58,6 @@ function renderTabel(dataArray) {
     barangBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Tidak ada barang yang cocok</td></tr>`;
   }
 }
-
-// Fungsi mencari barang di Firestore
-async function cariBarang(keyword) {
-  if (!keyword) {
-    barangBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Ketik ID atau Nama barang untuk mencari</td></tr>`;
-    return;
-  }
-
-  try {
-    const querySnapshot = await getDocs(collection(db, "barang"));
-    let hasil = [];
-    querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (
-        docSnap.id.toLowerCase().includes(keyword) ||
-        data.nama.toLowerCase().includes(keyword)
-      ) {
-        hasil.push({ id: docSnap.id, ...data });
-      }
-    });
-
-    renderTabel(hasil);
-
-  } catch (error) {
-    console.error("Gagal mencari barang:", error);
-    barangBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error mencari data!</td></tr>`;
-  }
-}
-
-// Event saat mengetik
-searchInput.addEventListener("input", () => {
-  const keyword = searchInput.value.trim().toLowerCase();
-  cariBarang(keyword);
-});
 
 // Fungsi edit barang
 window.editBarang = function (id) {
@@ -75,10 +70,26 @@ window.hapusBarang = async function (id) {
     try {
       await deleteDoc(doc(db, "barang", id));
       alert("Barang berhasil dihapus!");
-      cariBarang(searchInput.value.trim().toLowerCase()); // refresh hasil pencarian
+      loadBarang();
     } catch (error) {
       console.error("Gagal menghapus barang:", error);
       alert("Gagal menghapus barang!");
     }
   }
 };
+
+// Event pencarian
+if (searchInput) {
+  searchInput.addEventListener("input", () => {
+    const keyword = searchInput.value.toLowerCase();
+    const filtered = semuaBarang.filter(
+      b =>
+        b.id.toLowerCase().includes(keyword) ||
+        b.nama.toLowerCase().includes(keyword)
+    );
+    renderTabel(filtered);
+  });
+}
+
+// Jalankan loadBarang saat halaman dibuka
+loadBarang();
