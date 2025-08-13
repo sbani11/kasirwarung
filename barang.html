@@ -3,26 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kelola Barang</title>
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+
+  <body>
   <header>
     <h1>Kelola Barang</h1>
     <button onclick="window.location.href='index.html'" class="btn btn-secondary">🏠 Home</button>
   </header>
 <body>
 
-    <div class="search-box">
-      <input type="text" id="searchBarang" placeholder="Cari barang berdasarkan ID atau Nama...">
-    </div>
-  
   <div class="container">
     <h1>📦 Kelola Barang</h1>
-    <button class="btn btn-secondary" onclick="window.location.href='index.html'">🏠 Home</button>
     <button class="btn btn-primary" onclick="window.location.href='tambah-barang.html'">➕ Tambah Barang</button>
 
+    <!-- Search box -->
+    <div class="search-box" style="margin-top: 15px;">
+      <input type="text" id="searchBarang" placeholder="Cari barang berdasarkan ID atau Nama...">
+      <button class="btn btn-primary" id="btnCari">🔍 Cari</button>
+    </div>
+
+    <!-- Tabel data -->
     <table>
       <thead>
         <tr>
@@ -34,7 +36,7 @@
         </tr>
       </thead>
       <tbody id="barangBody">
-        <!-- Data barang dari Firebase -->
+        <tr><td colspan="5" style="text-align:center;">Ketik kata kunci lalu tekan Cari</td></tr>
       </tbody>
     </table>
   </div>
@@ -42,4 +44,3 @@
   <script type="module" src="barang.js"></script>
 </body>
 </html>
-
