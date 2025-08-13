@@ -1,45 +1,23 @@
 import { db } from "./firebase-config.js";
-import { collection, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import {
+  collection,
+  getDocs,
+  deleteDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 const barangBody = document.getElementById("barangBody");
 const searchInput = document.getElementById("searchBarang");
+const btnCari = document.getElementById("btnCari");
 
-let semuaBarang = []; // simpan semua data barang untuk keperluan filter
+// Cache barang yang sudah pernah diambil
+let cacheBarang = {};
 
-// Fungsi untuk load data barang
-async function loadBarang() {
-  barangBody.innerHTML = ""; // kosongkan tabel
-
-  try {
-    const querySnapshot = await getDocs(collection(db, "barang"));
-    semuaBarang = []; // reset array
-
-    if (querySnapshot.empty) {
-      barangBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Belum ada data barang</td></tr>`;
-      return;
-    }
-
-    querySnapshot.forEach((docSnap) => {
-      semuaBarang.push({
-        id: docSnap.id,
-        ...docSnap.data()
-      });
-    });
-
-    renderTabel(semuaBarang);
-
-  } catch (error) {
-    console.error("Gagal mengambil data barang:", error);
-    barangBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error memuat data!</td></tr>`;
-  }
-}
-
-// Fungsi untuk render tabel dari array barang
+// Render tabel
 function renderTabel(dataArray) {
   barangBody.innerHTML = "";
   dataArray.forEach((data) => {
     const tr = document.createElement("tr");
-
     tr.innerHTML = `
       <td>${data.id}</td>
       <td>${data.nama}</td>
@@ -50,7 +28,6 @@ function renderTabel(dataArray) {
         <button class="btn btn-danger" onclick="hapusBarang('${data.id}')">🗑 Hapus</button>
       </td>
     `;
-
     barangBody.appendChild(tr);
   });
 
@@ -58,6 +35,57 @@ function renderTabel(dataArray) {
     barangBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Tidak ada barang yang cocok</td></tr>`;
   }
 }
+
+// Fungsi cari barang dengan cache
+async function cariBarang(keyword) {
+  if (!keyword) {
+    barangBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Ketik kata kunci lalu tekan Cari</td></tr>`;
+    return;
+  }
+
+  keyword = keyword.toLowerCase();
+
+  // Cek cache dulu
+  let hasilCache = Object.values(cacheBarang).filter(
+    b =>
+      b.id.toLowerCase().includes(keyword) ||
+      b.nama.toLowerCase().includes(keyword)
+  );
+
+  if (hasilCache.length > 0) {
+    renderTabel(hasilCache);
+    return;
+  }
+
+  try {
+    // Ambil semua barang sekali saja
+    const snap = await getDocs(collection(db, "barang"));
+    let hasilBaru = [];
+
+    snap.forEach((docSnap) => {
+      const data = { id: docSnap.id, ...docSnap.data() };
+      cacheBarang[data.id] = data; // simpan ke cache
+
+      if (
+        data.id.toLowerCase().includes(keyword) ||
+        data.nama.toLowerCase().includes(keyword)
+      ) {
+        hasilBaru.push(data);
+      }
+    });
+
+    renderTabel(hasilBaru);
+
+  } catch (error) {
+    console.error("Gagal mencari barang:", error);
+    barangBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;">Error mencari data!</td></tr>`;
+  }
+}
+
+// Event tombol cari
+btnCari.addEventListener("click", () => {
+  cariBarang(searchInput.value.trim());
+});
 
 // Fungsi edit barang
 window.editBarang = function (id) {
@@ -70,26 +98,10 @@ window.hapusBarang = async function (id) {
     try {
       await deleteDoc(doc(db, "barang", id));
       alert("Barang berhasil dihapus!");
-      loadBarang();
+      delete cacheBarang[id]; // hapus dari cache
+      cariBarang(searchInput.value.trim()); // refresh tabel
     } catch (error) {
       console.error("Gagal menghapus barang:", error);
-      alert("Gagal menghapus barang!");
     }
   }
 };
-
-// Event pencarian
-if (searchInput) {
-  searchInput.addEventListener("input", () => {
-    const keyword = searchInput.value.toLowerCase();
-    const filtered = semuaBarang.filter(
-      b =>
-        b.id.toLowerCase().includes(keyword) ||
-        b.nama.toLowerCase().includes(keyword)
-    );
-    renderTabel(filtered);
-  });
-}
-
-// Jalankan loadBarang saat halaman dibuka
-loadBarang();
